@@ -1,13 +1,18 @@
-# Le Trésor de Valou — tirage en ligne
+# Le Trésor de Valou — sans Render
 
-Application Python basée sur serveur_tirage.py, avec QR code, attribution en temps réel et page organisateur protégée.
+## Version GitHub Pages (statique)
 
-## Hébergement Render
+- `index.html` : renvoi vers la page joueur
+- `joueur.html` : prénom, code individuel, équipe
+- `admin.html` : préparer des équipes et exporter les codes CSV
+- `shared.js` et `style.css` : tirage et thème féria, Cévennes, Pays Basque
 
-1. Ouvrir https://dashboard.render.com/ et connecter GitHub.
-2. Choisir **New > Blueprint** et le dépôt vajeux48-collab/tresor-de-valou.
-3. Vérifier le prix du plan Starter et du disque persistant (payants), puis confirmer le déploiement.
-4. Ouvrir l'URL Render pour les joueurs et /organisateur pour l'organisateur.
-5. Le secret administrateur est la variable TIRAGE_ADMIN_PASSWORD dans le tableau de bord Render.
+**Activer GitHub Pages :** Settings > Pages > Deploy from a branch > main > / (root) > Save.
 
-Les inscriptions sont stockées dans /var/data/tirage_etat.json. GitHub Pages ne peut pas exécuter Python. Le serveur doit être hébergé en ligne pour que les téléphones puissent participer. Un navigateur réinitialisé ou un autre téléphone peut permettre un second tirage : ce n'est pas une identification personnelle forte.
+Adresse joueur : https://vajeux48-collab.github.io/tirage-equipes/joueur.html
+
+Adresse admin : https://vajeux48-collab.github.io/tirage-equipes/admin.html
+
+L'organisateur génère les codes dans admin.html, télécharge le CSV et donne un code distinct à chaque invité. Les codes déterminent des équipes équilibrées. Aucun compte ni base de données nécessaire.
+
+**Limites :** GitHub Pages n'exécute pas le serveur Python. Les inscriptions ne sont pas synchronisées entre téléphones ; la page admin n'est pas protégée ; les codes peuvent être réutilisés sur d'autres appareils. Le fichier `serveur_tirage.py` est conservé dans le dépôt, mais n'est pas exécuté par GitHub Pages.
