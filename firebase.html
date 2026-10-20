@@ -1,16 +1,88 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#b7242e"><title>Le Trésor de Valou — Équipes en direct</title><style>*{box-sizing:border-box}body{margin:0;padding:15px;min-height:100dvh;background:repeating-linear-gradient(90deg,#b7242e 0 38px,#fff8e8 38px 76px);font-family:system-ui,Arial;color:#38221c}.app{max-width:940px;margin:auto;background:#fff9eb;border:5px solid white;border-radius:22px;box-shadow:0 9px 0 #7d1c24;padding:24px 15px;text-align:center}h1{color:#b7242e;font-size:clamp(2rem,8vw,3rem);margin:8px 0}.subtitle{font-weight:800;color:#1c5949}input{display:block;margin:12px auto;padding:15px;width:min(100%,360px);border:2px solid #dfc39a;border-radius:12px;font:inherit;text-align:center}button{cursor:pointer;border:0;border-radius:12px;padding:14px;background:#b7242e;color:white;font:inherit;font-weight:800}button:disabled{opacity:.55;cursor:wait}.hidden{display:none}.number{font-size:5rem;color:#b7242e;font-weight:900}.teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;text-align:left}.team{background:white;border:2px solid #e7cfa8;border-radius:12px;padding:12px}.team h3{color:#b7242e;display:flex;justify-content:space-between;margin:0 0 8px}.team ol{padding-left:24px;margin:0}.team li{min-height:27px;padding:3px 0;overflow-wrap:anywhere}.empty{color:#b4a393}.player-row{display:flex;justify-content:space-between;gap:5px;align-items:center}.remove{padding:3px 8px;background:#fff0ed;color:#a51e29;border:1px solid #a51e29}.status{min-height:24px;color:#a51e29}.small{font-size:.8rem;color:#76564b}</style></head><body><main class="app"><div style="font-size:2.4rem">🐂 🎉 🐗</div><div class="subtitle">30 ANS DE VALENTIN · CÉVENNES × PAYS BASQUE</div><h1>Le Trésor de Valou</h1><p id="status" class="status" role="status">Connexion aux équipes…</p><div id="form"><p>Entre ton prénom pour découvrir ton équipe !</p><input id="name" maxlength="40" autocomplete="given-name" placeholder="Ton prénom"><button id="draw" disabled>🎲 Tirer mon équipe</button></div><section id="result" class="hidden"><p id="hello"></p><p>Tu es dans l'équipe</p><div id="number" class="number"></div><p>Bonne aventure ! 🎉</p></section><button id="deleteMine" style="margin-top:12px;background:#fff0ed;color:#a51e29;border:2px solid #a51e29" disabled>✕ Supprimer mon joueur</button><h2>📋 Tableau des équipes en direct</h2><p id="count">0 / 80</p><div id="teams" class="teams"></div><p class="small">Les équipes sont partagées entre tous les téléphones. Seul le joueur connecté peut supprimer sa propre inscription.</p></main><script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import{getAuth,signInAnonymously,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import{getFirestore,doc,onSnapshot,runTransaction}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import{firebaseConfig}from"./firebase-config.js";
-const $=id=>document.getElementById(id),KEY="valou-firebase-player-id";
-const configReady=firebaseConfig.apiKey&&firebaseConfig.projectId&&firebaseConfig.appId&&!firebaseConfig.apiKey.includes("REMPLACER");
-if(!configReady){$("status").textContent="Configuration Firebase manquante. Demande à l'organisateur d'activer la connexion.";throw Error("Firebase non configuré")}
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),ref=doc(db,"tirages","valou2026");let uid=null,players=[],busy=false;
-function setStatus(s){$("status").textContent=s}
-function render(){const mine=players.find(p=>p.id===uid);$("form").classList.toggle("hidden",!!mine);$("result").classList.toggle("hidden",!mine);$("deleteMine").disabled=!mine||busy;$("draw").disabled=!uid||!!mine||busy;if(mine){$("hello").textContent="Bienvenue "+mine.name+" !";$("number").textContent=mine.team}$("count").textContent=players.length+" / 80 places";$("teams").replaceChildren();for(let team=1;team<=8;team++){const list=players.filter(p=>p.team===team),card=document.createElement("section");card.className="team";const h=document.createElement("h3");h.textContent="Équipe "+team;const count=document.createElement("span");count.textContent=list.length+"/10";h.append(count);card.append(h);const ol=document.createElement("ol");for(let i=0;i<10;i++){const li=document.createElement("li");if(list[i]){const row=document.createElement("div"),name=document.createElement("span");row.className="player-row";name.textContent=list[i].name;row.append(name);if(list[i].id===uid){const remove=document.createElement("button");remove.className="remove";remove.textContent="✕";remove.title="Supprimer mon joueur";remove.onclick=deleteMine;row.append(remove)}li.append(row)}else{li.className="empty";li.textContent="Place libre"}ol.append(li)}card.append(ol);$("teams").append(card)}}
-onAuthStateChanged(auth,user=>{if(!user)return;uid=user.uid;onSnapshot(ref,snap=>{players=Array.isArray(snap.data()?.players)?snap.data().players:[];setStatus("🟢 Équipes synchronisées");render()},err=>{setStatus("Erreur de synchronisation : "+err.message);render()})});signInAnonymously(auth).catch(e=>setStatus("Connexion impossible : "+e.message));
-$("draw").onclick=async()=>{const name=$("name").value.trim();if(!name){setStatus("Entre ton prénom.");return}if(!uid)return;busy=true;render();try{await runTransaction(db,async tx=>{const snap=await tx.get(ref),current=Array.isArray(snap.data()?.players)?snap.data().players:[];if(current.some(p=>p.id===uid))throw Error("Tu as déjà une équipe.");const counts=Array.from({length:8},(_,i)=>current.filter(p=>p.team===i+1).length);const free=counts.map((n,i)=>n<10?i+1:null).filter(Boolean);if(!free.length)throw Error("Les 80 places sont occupées.");const values=new Uint32Array(1);crypto.getRandomValues(values);const team=free[values[0]%free.length];tx.set(ref,{players:[...current,{id:uid,name:name.slice(0,40),team}]})});setStatus("🎉 Tirage enregistré !")}catch(e){setStatus(e.message)}finally{busy=false;render()}};
-async function deleteMine(){if(!uid||!players.some(p=>p.id===uid))return;if(!confirm("Supprimer ton inscription et libérer ta place ?"))return;busy=true;render();try{await runTransaction(db,async tx=>{const snap=await tx.get(ref),current=Array.isArray(snap.data()?.players)?snap.data().players:[];tx.set(ref,{players:current.filter(p=>p.id!==uid)})});setStatus("Ton inscription a été supprimée.")}catch(e){setStatus(e.message)}finally{busy=false;render()}}
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,signInAnonymously,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getFirestore,collection,doc,onSnapshot,runTransaction} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {firebaseConfig} from "./firebase-config.js";
+const $=id=>document.getElementById(id);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const col=collection(db,"valou2026_players");
+let uid=null,players=[],busy=false,connected=false;
+const status=s=>$("status").textContent=s;
+function render(){
+ const mine=players.find(p=>p.id===uid);
+ $("form").classList.toggle("hidden",!!mine);
+ $("result").classList.toggle("hidden",!mine);
+ $("deleteMine").disabled=!mine||busy||!connected;
+ $("draw").disabled=!uid||!!mine||busy||!connected;
+ if(mine){$("hello").textContent="Bienvenue "+mine.name+" !";$("number").textContent=mine.team}
+ $("count").textContent=players.length+" / 80 places";
+ $("teams").replaceChildren();
+ for(let team=1;team<=8;team++){
+  const list=players.filter(p=>p.team===team).sort((a,b)=>a.slot-b.slot);
+  const card=document.createElement("section");card.className="team";
+  const h=document.createElement("h3");h.textContent="Équipe "+team;
+  const count=document.createElement("span");count.textContent=list.length+"/10";h.append(count);card.append(h);
+  const ol=document.createElement("ol");
+  for(let i=1;i<=10;i++){
+   const li=document.createElement("li"),p=list.find(x=>x.slot===i);
+   if(p){
+    const row=document.createElement("div"),name=document.createElement("span");
+    row.className="player-row";name.textContent=p.name;row.append(name);
+    if(p.id===uid){const remove=document.createElement("button");remove.className="remove";remove.textContent="✕";remove.title="Supprimer mon joueur";remove.onclick=deleteMine;row.append(remove)}
+    li.append(row);
+   }else{li.className="empty";li.textContent="Place libre"}
+   ol.append(li);
+  }
+  card.append(ol);$("teams").append(card);
+ }
+}
+onAuthStateChanged(auth,user=>{
+ if(!user)return;uid=user.uid;
+ onSnapshot(col,snap=>{
+  players=snap.docs.map(d=>({...d.data(),docId:d.id}));
+  connected=true;status("🟢 Équipes synchronisées");render();
+ },err=>{connected=false;status("Erreur Firestore : "+err.message);render()});
+});
+signInAnonymously(auth).catch(e=>status("Erreur de connexion : "+e.message));
+$("draw").onclick=async()=>{
+ const name=$("name").value.trim();if(!name){status("Entre ton prénom.");return}
+ if(!uid||busy||!connected)return;
+ busy=true;render();
+ try{
+  if(players.some(p=>p.id===uid))throw Error("Tu es déjà inscrit.");
+  const slots=Array.from({length:80},(_,i)=>i);
+  const random=new Uint32Array(80);crypto.getRandomValues(random);
+  slots.sort((a,b)=>random[a]-random[b]);
+  let assigned=false;
+  for(const index of slots){
+   const team=Math.floor(index/10)+1,slot=index%10+1;
+   const ref=doc(col,"e"+team+"-p"+slot);
+   try{
+    await runTransaction(db,async tx=>{
+     const snapshot=await tx.get(ref);
+     if(snapshot.exists())throw Error("OCCUPE");
+     tx.set(ref,{id:uid,name:name.slice(0,40),team,slot});
+    });
+    assigned=true;break;
+   }catch(e){if(e.message==="OCCUPE"||e.code==="permission-denied"&&players.some(p=>p.team===team&&p.slot===slot))continue;throw e}
+  }
+  if(!assigned)throw Error("Toutes les équipes sont complètes.");
+  status("🎉 Tirage enregistré !");
+ }catch(e){status("Erreur : "+e.message)}finally{busy=false;render()}
+};
+async function deleteMine(){
+ const mine=players.find(p=>p.id===uid);
+ if(!mine||busy||!confirm("Supprimer ton inscription et libérer ta place ?"))return;
+ busy=true;render();
+ try{
+  const ref=doc(col,mine.docId);
+  await runTransaction(db,async tx=>{
+   const snap=await tx.get(ref);
+   if(!snap.exists()||snap.data().id!==uid)throw Error("Inscription introuvable.");
+   tx.delete(ref);
+  });
+  status("Ton inscription a été supprimée.");
+ }catch(e){status("Erreur : "+e.message)}finally{busy=false;render()}
+}
 $("deleteMine").onclick=deleteMine;render();
 </script></body></html>
