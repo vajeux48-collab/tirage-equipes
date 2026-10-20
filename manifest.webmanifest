@@ -1,0 +1,21 @@
+{
+  "id": "./joueur.html",
+  "name": "Le Trésor de Valou — 30 ans de Valentin",
+  "short_name": "Trésor de Valou",
+  "description": "Escape game et tirage des équipes de la Peña Valou",
+  "start_url": "./joueur.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff7e8",
+  "theme_color": "#bd252a",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
