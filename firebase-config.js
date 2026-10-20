@@ -1,8 +1,10 @@
-// Renseigner avec les paramètres de l'application Web Firebase (Console Firebase > Paramètres du projet).
-// Ces identifiants Web ne sont pas des mots de passe ; protéger les données avec firestore.rules.
 export const firebaseConfig = {
-  apiKey: "REMPLACER_API_KEY",
-  authDomain: "REMPLACER_PROJECT_ID.firebaseapp.com",
-  projectId: "REMPLACER_PROJECT_ID",
-  appId: "REMPLACER_APP_ID"
+  apiKey: "AIzaSyAg1Z80EXZU5lqWIKXOLKBwAdppdsGkoKA",
+  authDomain: "tirage-equipe.firebaseapp.com",
+  databaseURL: "https://tirage-equipe-default-rtdb.firebaseio.com",
+  projectId: "tirage-equipe",
+  storageBucket: "tirage-equipe.firebasestorage.app",
+  messagingSenderId: "861684241724",
+  appId: "1:861684241724:web:d13d662466382ffe65ba39",
+  measurementId: "G-6ZHGP5G90B"
 };
