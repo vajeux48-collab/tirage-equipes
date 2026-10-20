@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tirage d'équipes</title>
+<style>
+:root {
+  --bg: #eef0f3; --surface: #ffffff; --surface-2: #e4e8ee; --fg: #1b2330; --muted: #5d6877;
+  --line: #cdd4de; --accent: #c2410c; --accent-fg: #ffffff; --ok: #17703f; --warn: #a35200;
+  --font-body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121820; --surface: #1b232e; --surface-2: #26313f; --fg: #e8ecf2; --muted: #9aa5b5;
+    --line: #34404f; --accent: #f08a54; --accent-fg: #1a0e07; --ok: #5fcf92; --warn: #f0b259;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); padding: 28px 16px 48px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 24px; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.1; margin: 0 0 6px; }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+.layout { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; display: grid; gap: 16px; min-width: 0; }
+label { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
+textarea, input { width: 100%; font: 14px/1.45 var(--font-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 9px 10px; }
+textarea { min-height: 220px; resize: vertical; }
+textarea:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.count { font: 13px var(--font-mono); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ok { color: var(--ok); } .warn { color: var(--warn); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+button { font: 600 14px var(--font-body); border-radius: 4px; padding: 10px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); flex: 1 1 auto; }
+.msg { font-size: 13px; margin: 0; min-height: 1.4em; }
+.msg.err { color: var(--warn); }
+.result { display: grid; gap: 14px; min-width: 0; }
+.result-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.result-head h2 { font-size: 1.25rem; margin: 0; }
+.meta { font: 12px var(--font-mono); color: var(--muted); }
+.teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.team { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-width: 0; overflow: hidden; }
+.team h3 { margin: 0; padding: 10px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 1rem; background: var(--surface-2); border-bottom: 2px solid var(--accent); }
+.team h3 span { font: 12px var(--font-mono); font-weight: 400; color: var(--muted); }
+.team ol { list-style: none; margin: 0; padding: 6px 0; counter-reset: n; }
+.team li { counter-increment: n; padding: 3px 12px; display: flex; gap: 10px; align-items: baseline; font-size: 14px; overflow-wrap: anywhere; }
+.team li::before { content: counter(n); font: 11px var(--font-mono); color: var(--muted); min-width: 1.4em; text-align: right; }
+@media (prefers-reduced-motion: no-preference) {
+  .team { animation: rise .25s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+@media print { .panel.settings, header p, .actions { display: none; } body { background: #fff; color: #000; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tirage d'équipes</h1>
+    <p>Collez une liste de noms, choisissez le nombre d'équipes et leur taille, puis lancez le tirage. Chaque tirage mélange complètement la liste. Ce fichier fonctionne seul, sans internet.</p>
+  </header>
+
+  <div class="layout">
+    <section class="panel settings" aria-label="Réglages">
+      <div>
+        <label for="names">Participants (un nom par ligne)</label>
+        <textarea id="names" spellcheck="false"></textarea>
+        <p class="hint">La liste de départ est un exemple : remplacez-la par vos noms.</p>
+      </div>
+      <div class="row">
+        <div><label for="nteams">Équipes</label><input id="nteams" type="number" min="1" max="50" value="8" inputmode="numeric"></div>
+        <div><label for="size">Joueurs par équipe</label><input id="size" type="number" min="1" max="200" value="10" inputmode="numeric"></div>
+      </div>
+      <div>
+        <label for="seed">Graine (facultatif)</label>
+        <input id="seed" type="text" placeholder="ex. finale-2026" autocomplete="off">
+        <p class="hint">Avec la même graine et la même liste, vous obtenez toujours le même tirage. Laissez vide pour un tirage différent à chaque fois.</p>
+      </div>
+      <div class="count" aria-live="polite">
+        <span>Noms saisis : <b id="have">0</b></span>
+        <span>Attendus : <b id="need">80</b></span>
+      </div>
+      <div class="actions">
+        <button class="primary" id="draw" type="button">Tirer au sort</button>
+        <button id="copy" type="button">Copier</button>
+        <button id="save" type="button">Enregistrer (.txt)</button>
+      </div>
+      <p class="msg" id="msg" role="status"></p>
+    </section>
+
+    <section class="result" aria-label="Résultat du tirage">
+      <div class="result-head">
+        <h2 id="title">Équipes</h2>
+        <span class="meta" id="meta"></span>
+      </div>
+      <div id="teams" class="teams"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var namesEl = $("names"), nteamsEl = $("nteams"), sizeEl = $("size"), seedEl = $("seed");
+  var teamsEl = $("teams"), msgEl = $("msg"), metaEl = $("meta");
+  var current = [];
+
+  var sample = [];
+  for (var i = 1; i <= 80; i++) sample.push("Participant " + i);
+  namesEl.value = sample.join("\n");
+
+  function clampInt(el, min, max, fallback) {
+    var v = parseInt(el.value, 10);
+    if (isNaN(v)) v = fallback;
+    return Math.max(min, Math.min(max, v));
+  }
+  function readNames() {
+    return namesEl.value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+  function secureRandom() {
+    var buf = new Uint32Array(1);
+    window.crypto.getRandomValues(buf);
+    return buf[0] / 4294967296;
+  }
+  function seeded(text) {
+    var h = 1779033703 ^ text.length;
+    for (var i = 0; i < text.length; i++) {
+      h = Math.imul(h ^ text.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    var a = h >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(list, rnd) {
+    var a = list.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(rnd() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function updateCount() {
+    var n = readNames().length;
+    var need = clampInt(nteamsEl, 1, 50, 8) * clampInt(sizeEl, 1, 200, 10);
+    $("have").textContent = n;
+    $("need").textContent = need;
+    $("have").className = n === need ? "ok" : "warn";
+    return { n: n, need: need };
+  }
+  function render(teams, size) {
+    teamsEl.innerHTML = "";
+    teams.forEach(function (team, idx) {
+      var art = document.createElement("article");
+      art.className = "team";
+      art.style.animationDelay = (idx * 30) + "ms";
+      var h = document.createElement("h3");
+      h.textContent = "Équipe " + (idx + 1);
+      var c = document.createElement("span");
+      c.textContent = team.length + " / " + size;
+      h.appendChild(c);
+      var ol = document.createElement("ol");
+      team.forEach(function (name) {
+        var li = document.createElement("li");
+        li.textContent = name;
+        ol.appendChild(li);
+      });
+      art.appendChild(h);
+      art.appendChild(ol);
+      teamsEl.appendChild(art);
+    });
+  }
+  function draw() {
+    var counts = updateCount();
+    var nTeams = clampInt(nteamsEl, 1, 50, 8);
+    var size = clampInt(sizeEl, 1, 200, 10);
+    var names = readNames();
+    msgEl.className = "msg";
+    if (counts.n !== counts.need) {
+      var diff = counts.need - counts.n;
+      msgEl.className = "msg err";
+      msgEl.textContent = diff > 0
+        ? "Il manque " + diff + " nom" + (diff > 1 ? "s" : "") + " pour remplir " + nTeams + " équipes de " + size + "."
+        : "Il y a " + (-diff) + " nom" + (-diff > 1 ? "s" : "") + " en trop pour " + nTeams + " équipes de " + size + ".";
+      return;
+    }
+    var dup = names.filter(function (n, i) { return names.indexOf(n) !== i; });
+    var seedText = seedEl.value.trim();
+    var mixed = shuffle(names, seedText ? seeded(seedText) : secureRandom);
+    current = [];
+    for (var t = 0; t < nTeams; t++) current.push(mixed.slice(t * size, (t + 1) * size));
+    render(current, size);
+    $("title").textContent = nTeams + " équipes de " + size;
+    metaEl.textContent = seedText ? "graine : " + seedText : "tirage aléatoire";
+    msgEl.textContent = dup.length
+      ? "Tirage effectué. Attention : " + dup.length + " nom(s) apparaissent plusieurs fois dans la liste."
+      : "Tirage effectué.";
+    if (dup.length) msgEl.className = "msg err";
+  }
+  function asText() {
+    return current.map(function (team, i) {
+      return "Équipe " + (i + 1) + "\n" + team.map(function (n) { return "- " + n; }).join("\n");
+    }).join("\n\n");
+  }
+  function copyText(text, done) {
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      done(ok);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    } else { fallback(); }
+  }
+
+  $("draw").addEventListener("click", draw);
+  $("copy").addEventListener("click", function () {
+    if (!current.length) { msgEl.className = "msg err"; msgEl.textContent = "Lancez d'abord un tirage."; return; }
+    copyText(asText(), function (ok) {
+      msgEl.className = ok ? "msg" : "msg err";
+      msgEl.textContent = ok ? "Résultat copié." : "Copie impossible : sélectionnez le texte des équipes à la main.";
+    });
+  });
+  $("save").addEventListener("click", function () {
+    if (!current.length) { msgEl.className = "msg err"; msgEl.textContent = "Lancez d'abord un tirage."; return; }
+    var blob = new Blob([asText()], { type: "text/plain;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "equipes.txt";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    msgEl.className = "msg"; msgEl.textContent = "Fichier equipes.txt enregistré.";
+  });
+  [namesEl, nteamsEl, sizeEl].forEach(function (el) { el.addEventListener("input", updateCount); });
+
+  updateCount();
+  draw();
+  msgEl.textContent = "Exemple affiché avec 80 participants fictifs. Collez vos noms puis relancez.";
+})();
+</script>
+</body>
+</html>
