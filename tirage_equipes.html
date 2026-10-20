@@ -1,217 +1,309 @@
-<!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Tirage d'équipes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
+/* Mise en page : deux vues (Organisateur / Jouer). Organisateur : réglages à gauche, QR code et équipes à droite.
+   Jouer : une seule colonne centrée avec un gros bouton et le numéro d'équipe. */
 :root {
-  --bg: #eef0f3; --surface: #ffffff; --surface-2: #e4e8ee; --fg: #1b2330; --muted: #5d6877;
-  --line: #cdd4de; --accent: #c2410c; --accent-fg: #ffffff; --ok: #17703f; --warn: #a35200;
-  --font-body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --bg: #eef0f3;
+  --surface: #ffffff;
+  --surface-2: #e4e8ee;
+  --fg: #1b2330;
+  --muted: #5d6877;
+  --line: #cdd4de;
+  --accent: #c2410c;
+  --accent-fg: #ffffff;
+  --ok: #17703f;
+  --warn: #a35200;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #121820; --surface: #1b232e; --surface-2: #26313f; --fg: #e8ecf2; --muted: #9aa5b5;
-    --line: #34404f; --accent: #f08a54; --accent-fg: #1a0e07; --ok: #5fcf92; --warn: #f0b259;
+  :root:not([data-theme="light"]) {
+    --bg: #121820;
+    --surface: #1b232e;
+    --surface-2: #26313f;
+    --fg: #e8ecf2;
+    --muted: #9aa5b5;
+    --line: #34404f;
+    --accent: #f08a54;
+    --accent-fg: #1a0e07;
+    --ok: #5fcf92;
+    --warn: #f0b259;
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #121820;
+  --surface: #1b232e;
+  --surface-2: #26313f;
+  --fg: #e8ecf2;
+  --muted: #9aa5b5;
+  --line: #34404f;
+  --accent: #f08a54;
+  --accent-fg: #1a0e07;
+  --ok: #5fcf92;
+  --warn: #f0b259;
+  color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); padding: 28px 16px 48px; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
 .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 24px; }
-h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.1; margin: 0 0 6px; }
+
+header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+header h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  line-height: 1.1;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
 header p { margin: 0; color: var(--muted); max-width: 62ch; }
+
+.tabs { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.tabs button { border: 0; border-radius: 0; background: transparent; padding: 10px 18px; }
+.tabs button + button { border-left: 1px solid var(--line); }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); }
+
 .layout { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+.right { display: grid; gap: 24px; min-width: 0; }
+
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px; display: grid; gap: 16px; min-width: 0; }
-label { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
-textarea, input { width: 100%; font: 14px/1.45 var(--font-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 9px 10px; }
+.panel h2 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; }
+label, .lbl { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
+
+textarea, input[type="number"], input[type="text"] {
+  width: 100%;
+  font: 14px/1.45 var(--font-mono);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 9px 10px;
+}
 textarea { min-height: 220px; resize: vertical; }
 textarea:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
-.count { font: 13px var(--font-mono); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.ok { color: var(--ok); } .warn { color: var(--warn); }
+
+.count { font-family: var(--font-mono); font-size: 13px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.count b { font-weight: 500; }
+.count .ok { color: var(--ok); }
+.count .warn { color: var(--warn); }
+
 .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-button { font: 600 14px var(--font-body); border-radius: 4px; padding: 10px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--surface-2); color: var(--fg); }
-button:hover { border-color: var(--muted); }
+button {
+  font: 600 14px var(--font-body);
+  border-radius: 4px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--fg);
+}
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: .55; cursor: not-allowed; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); flex: 1 1 auto; }
+button.primary:hover:not(:disabled) { filter: brightness(1.06); }
+
 .msg { font-size: 13px; margin: 0; min-height: 1.4em; }
 .msg.err { color: var(--warn); }
+
+/* QR code + places */
+.qr-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 560px) { .qr-grid { grid-template-columns: minmax(0, 1fr); justify-items: start; } }
+.qr-box { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 8px; width: 200px; max-width: 100%; aspect-ratio: 1; }
+.qr-box svg { display: block; width: 100%; height: 100%; }
+.qr-fallback { color: #444; font-size: 12px; padding: 8px; }
+.linkline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.linkline code { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; min-width: 0; flex: 1 1 180px; color: var(--muted); }
+.places { font-family: var(--font-mono); font-size: 13px; margin: 0 0 10px; }
+.bars { display: grid; gap: 5px; }
+.bar { display: grid; grid-template-columns: 64px minmax(0, 1fr) 44px; gap: 8px; align-items: center; font-family: var(--font-mono); font-size: 12px; }
+.bar .track { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); width: 0; }
+.bar .n { text-align: right; color: var(--muted); }
+.confirm { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13px; }
+
 .result { display: grid; gap: 14px; min-width: 0; }
 .result-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.result-head h2 { font-size: 1.25rem; margin: 0; }
-.meta { font: 12px var(--font-mono); color: var(--muted); }
+.result-head h2 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; }
+.result-head .meta { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
 .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
 .team { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; min-width: 0; overflow: hidden; }
-.team h3 { margin: 0; padding: 10px 12px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 1rem; background: var(--surface-2); border-bottom: 2px solid var(--accent); }
-.team h3 span { font: 12px var(--font-mono); font-weight: 400; color: var(--muted); }
+.team h3 {
+  margin: 0;
+  padding: 10px 12px;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-family: var(--font-display); font-size: 1rem;
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--accent);
+}
+.team h3 span { font-family: var(--font-mono); font-size: 12px; font-weight: 400; color: var(--muted); }
 .team ol { list-style: none; margin: 0; padding: 6px 0; counter-reset: n; }
-.team li { counter-increment: n; padding: 3px 12px; display: flex; gap: 10px; align-items: baseline; font-size: 14px; overflow-wrap: anywhere; }
-.team li::before { content: counter(n); font: 11px var(--font-mono); color: var(--muted); min-width: 1.4em; text-align: right; }
+.team li {
+  counter-increment: n;
+  padding: 3px 12px;
+  display: flex; gap: 10px; align-items: baseline;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.team li::before { content: counter(n); font-family: var(--font-mono); font-size: 11px; color: var(--muted); min-width: 1.4em; text-align: right; }
+
+/* Vue Jouer */
+.play { max-width: 460px; margin: 0 auto; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 28px 22px; display: grid; gap: 18px; justify-items: center; text-align: center; }
+.play h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0; text-wrap: balance; }
+.bignum {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(6rem, 32vw, 9rem); line-height: 1;
+  width: 100%; padding: 20px 8px;
+  background: var(--bg); border: 2px solid var(--line); border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.bignum.done { border-color: var(--accent); color: var(--accent); }
+.play-label { margin: 0; font-size: 1.05rem; min-height: 1.6em; }
+button.big { font-size: 1.15rem; padding: 14px 28px; width: 100%; }
+.namefield { width: 100%; text-align: left; }
+.namefield input { font-family: var(--font-body); font-size: 1.05rem; padding: 12px; }
+.team.static { animation: none; }
+.live-empty { grid-column: 1 / -1; border: 1px dashed var(--line); border-radius: 6px; padding: 20px; color: var(--muted); text-align: center; }
+.team li.mine { font-weight: 600; }
+
 @media (prefers-reduced-motion: no-preference) {
   .team { animation: rise .25s ease-out both; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .bar .fill { transition: width .25s ease-out; }
 }
-@media print { .panel.settings, header p, .actions { display: none; } body { background: #fff; color: #000; } }
 </style>
-</head>
-<body>
+
 <div class="wrap">
   <header>
-    <h1>Tirage d'équipes</h1>
-    <p>Collez une liste de noms, choisissez le nombre d'équipes et leur taille, puis lancez le tirage. Chaque tirage mélange complètement la liste. Ce fichier fonctionne seul, sans internet.</p>
+    <div>
+      <h1>Tirage d'équipes</h1>
+      <p>Répartissez une liste de noms en équipes, ou laissez chaque joueur scanner le QR code et appuyer sur Jouer pour recevoir son numéro d'équipe.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Vue">
+      <button type="button" role="tab" id="tab-org" aria-selected="true">Organisateur</button>
+      <button type="button" role="tab" id="tab-play" aria-selected="false">Jouer</button>
+    </div>
   </header>
 
-  <div class="layout">
-    <section class="panel settings" aria-label="Réglages">
-      <div>
-        <label for="names">Participants (un nom par ligne)</label>
-        <textarea id="names" spellcheck="false"></textarea>
-        <p class="hint">La liste de départ est un exemple : remplacez-la par vos noms.</p>
-      </div>
+  <!-- Vue organisateur -->
+  <div id="view-org" class="layout">
+    <section class="panel" aria-label="Réglages">
+      <h2>Réglages</h2>
       <div class="row">
-        <div><label for="nteams">Équipes</label><input id="nteams" type="number" min="1" max="50" value="8" inputmode="numeric"></div>
-        <div><label for="size">Joueurs par équipe</label><input id="size" type="number" min="1" max="200" value="10" inputmode="numeric"></div>
+        <div>
+          <label for="nteams">Équipes</label>
+          <input id="nteams" type="number" min="1" max="50" value="8" inputmode="numeric">
+        </div>
+        <div>
+          <label for="size">Joueurs par équipe</label>
+          <input id="size" type="number" min="1" max="200" value="10" inputmode="numeric">
+        </div>
       </div>
-      <div>
-        <label for="seed">Graine (facultatif)</label>
-        <input id="seed" type="text" placeholder="ex. finale-2026" autocomplete="off">
-        <p class="hint">Avec la même graine et la même liste, vous obtenez toujours le même tirage. Laissez vide pour un tirage différent à chaque fois.</p>
-      </div>
-      <div class="count" aria-live="polite">
-        <span>Noms saisis : <b id="have">0</b></span>
-        <span>Attendus : <b id="need">80</b></span>
-      </div>
-      <div class="actions">
-        <button class="primary" id="draw" type="button">Tirer au sort</button>
-        <button id="copy" type="button">Copier</button>
-        <button id="save" type="button">Enregistrer (.txt)</button>
-      </div>
-      <p class="msg" id="msg" role="status"></p>
+      <p class="hint">Ces valeurs s'appliquent au tirage par QR code. Seuls les éditeurs de la page peuvent les modifier.</p>
     </section>
 
-    <section class="result" aria-label="Résultat du tirage">
-      <div class="result-head">
-        <h2 id="title">Équipes</h2>
-        <span class="meta" id="meta"></span>
-      </div>
-      <div id="teams" class="teams"></div>
-    </section>
+    <div class="right">
+      <section class="panel" aria-label="Tirage par QR code">
+        <h2>Tirage par QR code</h2>
+        <div class="qr-grid">
+          <div class="qr-box" id="qr" aria-label="QR code vers la page Jouer"></div>
+          <div>
+            <p class="places" id="qr-status">Connexion au compteur partagé…</p>
+            <div class="bars" id="bars"></div>
+          </div>
+        </div>
+        <div class="linkline">
+          <code id="play-url"></code>
+          <button type="button" id="copy-link">Copier le lien</button>
+        </div>
+        <p class="hint" id="qr-hint">Les joueurs doivent ouvrir le lien connectés à Claude, avec un accès Contributeur (menu Partager de la page). Chaque personne ne peut tirer qu'une fois.</p>
+        <div id="admin-zone" hidden>
+          <div class="actions" id="reset-row">
+            <button type="button" id="reset">Remettre les places à zéro</button>
+          </div>
+          <div class="confirm" id="reset-confirm" hidden>
+            <span>Effacer tous les numéros déjà attribués ?</span>
+            <button type="button" id="reset-yes">Oui, effacer</button>
+            <button type="button" id="reset-no">Annuler</button>
+          </div>
+          <p class="msg" id="admin-msg" role="status"></p>
+        </div>
+      </section>
+
+      <section class="result" aria-label="Joueurs inscrits">
+        <div class="result-head">
+          <h2>Joueurs inscrits</h2>
+          <span class="meta" id="live-meta">en direct</span>
+        </div>
+        <div id="live" class="teams"></div>
+      </section>
+
+      
+    </div>
   </div>
+
+  <!-- Vue joueur -->
+  <section id="view-play" hidden aria-label="Jouer">
+    <div class="play">
+      <p class="lbl" style="margin:0">Tirage des équipes</p>
+      <h2 id="play-title">Quelle est votre équipe ?</h2>
+      <div class="bignum" id="bignum" aria-hidden="true">?</div>
+      <p class="play-label" id="play-label" aria-live="polite">Connexion en cours…</p>
+      <div class="namefield">
+        <label for="pname">Nom du joueur</label>
+        <input id="pname" type="text" maxlength="30" placeholder="Votre prénom et nom" autocomplete="name">
+      </div>
+      <button class="primary big" id="play" type="button" disabled>Jouer</button>
+      <p class="msg" id="play-msg" role="status"></p>
+      <p class="hint" id="play-left" style="margin:0"></p>
+    </div>
+  </section>
 </div>
 
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
-  var namesEl = $("names"), nteamsEl = $("nteams"), sizeEl = $("size"), seedEl = $("seed");
-  var teamsEl = $("teams"), msgEl = $("msg"), metaEl = $("meta");
-  var current = [];
 
-  var sample = [];
-  for (var i = 1; i <= 80; i++) sample.push("Participant " + i);
-  namesEl.value = sample.join("\n");
+  // ---------- Constantes ----------
+  var PAGE_URL = "https://claude.ai/artifact/WwCuTH2T4TM1KdwmTT85nR";
+  var PLAY_URL = PAGE_URL + "#jouer";
 
+  // ---------- Éléments ----------
+  var nteamsEl = $("nteams"), sizeEl = $("size");
+
+  // ---------- Utilitaires ----------
   function clampInt(el, min, max, fallback) {
     var v = parseInt(el.value, 10);
     if (isNaN(v)) v = fallback;
     return Math.max(min, Math.min(max, v));
-  }
-  function readNames() {
-    return namesEl.value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
   }
   function secureRandom() {
     var buf = new Uint32Array(1);
     window.crypto.getRandomValues(buf);
     return buf[0] / 4294967296;
   }
-  function seeded(text) {
-    var h = 1779033703 ^ text.length;
-    for (var i = 0; i < text.length; i++) {
-      h = Math.imul(h ^ text.charCodeAt(i), 3432918353);
-      h = (h << 13) | (h >>> 19);
-    }
-    var a = h >>> 0;
-    return function () {
-      a |= 0; a = (a + 0x6D2B79F5) | 0;
-      var t = Math.imul(a ^ (a >>> 15), 1 | a);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-  function shuffle(list, rnd) {
-    var a = list.slice();
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(rnd() * (i + 1));
-      var t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    return a;
-  }
-  function updateCount() {
-    var n = readNames().length;
-    var need = clampInt(nteamsEl, 1, 50, 8) * clampInt(sizeEl, 1, 200, 10);
-    $("have").textContent = n;
-    $("need").textContent = need;
-    $("have").className = n === need ? "ok" : "warn";
-    return { n: n, need: need };
-  }
-  function render(teams, size) {
-    teamsEl.innerHTML = "";
-    teams.forEach(function (team, idx) {
-      var art = document.createElement("article");
-      art.className = "team";
-      art.style.animationDelay = (idx * 30) + "ms";
-      var h = document.createElement("h3");
-      h.textContent = "Équipe " + (idx + 1);
-      var c = document.createElement("span");
-      c.textContent = team.length + " / " + size;
-      h.appendChild(c);
-      var ol = document.createElement("ol");
-      team.forEach(function (name) {
-        var li = document.createElement("li");
-        li.textContent = name;
-        ol.appendChild(li);
-      });
-      art.appendChild(h);
-      art.appendChild(ol);
-      teamsEl.appendChild(art);
-    });
-  }
-  function draw() {
-    var counts = updateCount();
-    var nTeams = clampInt(nteamsEl, 1, 50, 8);
-    var size = clampInt(sizeEl, 1, 200, 10);
-    var names = readNames();
-    msgEl.className = "msg";
-    if (counts.n !== counts.need) {
-      var diff = counts.need - counts.n;
-      msgEl.className = "msg err";
-      msgEl.textContent = diff > 0
-        ? "Il manque " + diff + " nom" + (diff > 1 ? "s" : "") + " pour remplir " + nTeams + " équipes de " + size + "."
-        : "Il y a " + (-diff) + " nom" + (-diff > 1 ? "s" : "") + " en trop pour " + nTeams + " équipes de " + size + ".";
-      return;
-    }
-    var dup = names.filter(function (n, i) { return names.indexOf(n) !== i; });
-    var seedText = seedEl.value.trim();
-    var mixed = shuffle(names, seedText ? seeded(seedText) : secureRandom);
-    current = [];
-    for (var t = 0; t < nTeams; t++) current.push(mixed.slice(t * size, (t + 1) * size));
-    render(current, size);
-    $("title").textContent = nTeams + " équipes de " + size;
-    metaEl.textContent = seedText ? "graine : " + seedText : "tirage aléatoire";
-    msgEl.textContent = dup.length
-      ? "Tirage effectué. Attention : " + dup.length + " nom(s) apparaissent plusieurs fois dans la liste."
-      : "Tirage effectué.";
-    if (dup.length) msgEl.className = "msg err";
-  }
-  function asText() {
-    return current.map(function (team, i) {
-      return "Équipe " + (i + 1) + "\n" + team.map(function (n) { return "- " + n; }).join("\n");
-    }).join("\n\n");
-  }
-  function copyText(text, done) {
+  function copyText(text, onDone) {
     function fallback() {
       var ta = document.createElement("textarea");
       ta.value = text; ta.setAttribute("readonly", "");
@@ -220,37 +312,350 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
       var ok = false;
       try { ok = document.execCommand("copy"); } catch (e) {}
       document.body.removeChild(ta);
-      done(ok);
+      onDone(ok);
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+      navigator.clipboard.writeText(text).then(function () { onDone(true); }, fallback);
     } else { fallback(); }
   }
 
-  $("draw").addEventListener("click", draw);
-  $("copy").addEventListener("click", function () {
-    if (!current.length) { msgEl.className = "msg err"; msgEl.textContent = "Lancez d'abord un tirage."; return; }
-    copyText(asText(), function (ok) {
-      msgEl.className = ok ? "msg" : "msg err";
-      msgEl.textContent = ok ? "Résultat copié." : "Copie impossible : sélectionnez le texte des équipes à la main.";
+  // ---------- Onglets ----------
+  function showView(name) {
+    var play = name === "play";
+    $("view-org").hidden = play;
+    $("view-play").hidden = !play;
+    $("tab-org").setAttribute("aria-selected", play ? "false" : "true");
+    $("tab-play").setAttribute("aria-selected", play ? "true" : "false");
+  }
+  $("tab-org").addEventListener("click", function () { showView("org"); });
+  $("tab-play").addEventListener("click", function () { showView("play"); });
+  var startHash = "";
+  try { startHash = (window.location.hash || "").replace("#", ""); } catch (e) {}
+  showView(startHash === "jouer" ? "play" : "org");
+
+  // ---------- QR code ----------
+  function renderQr() {
+    var box = $("qr");
+    $("play-url").textContent = PLAY_URL;
+    try {
+      var qr = qrcode(0, "M");
+      qr.addData(PLAY_URL);
+      qr.make();
+      var n = qr.getModuleCount(), quiet = 3, d = "";
+      for (var r = 0; r < n; r++) {
+        for (var c = 0; c < n; c++) {
+          if (qr.isDark(r, c)) d += "M" + (c + quiet) + " " + (r + quiet) + "h1v1h-1z";
+        }
+      }
+      var size = n + quiet * 2;
+      box.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size +
+        '" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="' + size + '" height="' + size +
+        '" fill="#ffffff"/><path d="' + d + '" fill="#000000"/></svg>';
+    } catch (e) {
+      box.innerHTML = '<p class="qr-fallback">QR code indisponible ici. Partagez le lien affiché à côté.</p>';
+    }
+  }
+  $("copy-link").addEventListener("click", function () {
+    copyText(PLAY_URL, function (ok) {
+      $("qr-hint").textContent = ok ? "Lien copié." : "Copie impossible ici : sélectionnez le lien à la main.";
     });
   });
-  $("save").addEventListener("click", function () {
-    if (!current.length) { msgEl.className = "msg err"; msgEl.textContent = "Lancez d'abord un tirage."; return; }
-    var blob = new Blob([asText()], { type: "text/plain;charset=utf-8" });
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "equipes.txt";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-    msgEl.className = "msg"; msgEl.textContent = "Fichier equipes.txt enregistré.";
-  });
-  [namesEl, nteamsEl, sizeEl].forEach(function (el) { el.addEventListener("input", updateCount); });
+  renderQr();
 
-  updateCount();
-  draw();
-  msgEl.textContent = "Exemple affiché avec 80 participants fictifs. Collez vos noms puis relancez.";
+  // ---------- Tirage partagé (numéro d'équipe) ----------
+  var shared = { db: null, uid: null, canWrite: null, isAdmin: false, slotsReady: false, error: "" };
+  var cfg = { teams: 8, size: 10 };
+  var slots = {};        // id -> données (seulement les places prises)
+  var slotIds = [];      // tous les documents présents (pour la remise à zéro)
+  var busy = false;
+  var rolling = false;
+  var lastShownTeam = 0;
+
+  function slotId(t, n) { return "t" + t + "_" + n; }
+
+  function snapshotCounts() {
+    var counts = [], names = [], total = 0, mine = 0, mineName = "", t;
+    for (t = 0; t <= cfg.teams; t++) { counts.push(0); names.push([]); }
+    Object.keys(slots).forEach(function (id) {
+      var s = slots[id];
+      var team = s.team, n = parseInt(id.split("_")[1], 10);
+      if (typeof team === "number" && team >= 1 && team <= cfg.teams && n >= 1 && n <= cfg.size) {
+        counts[team]++; total++;
+        names[team].push({ name: typeof s.name === "string" ? s.name : "", at: typeof s.at === "number" ? s.at : 0, own: !!(shared.uid && s.owner === shared.uid) });
+      }
+      if (shared.uid && s.owner === shared.uid) { mine = team; mineName = typeof s.name === "string" ? s.name : ""; }
+    });
+    for (t = 1; t <= cfg.teams; t++) names[t].sort(function (a, b) { return a.at - b.at; });
+    return { counts: counts, names: names, total: total, mine: mine, mineName: mineName };
+  }
+
+  // Liste en direct : les noms s'ajoutent équipe par équipe, dans l'ordre d'arrivée
+  function renderLive(info) {
+    var wrap = $("live");
+    wrap.innerHTML = "";
+    $("live-meta").textContent = info.total + " / " + (cfg.teams * cfg.size) + " inscrits";
+    if (!info.total) {
+      var empty = document.createElement("p");
+      empty.className = "live-empty";
+      empty.textContent = shared.db
+        ? "Aucun joueur pour l'instant. Les noms apparaissent ici dès que quelqu'un appuie sur Jouer."
+        : "La liste en direct n'est pas disponible dans cette vue.";
+      wrap.appendChild(empty);
+      return;
+    }
+    for (var t = 1; t <= cfg.teams; t++) {
+      var art = document.createElement("article");
+      art.className = "team static";
+      var h = document.createElement("h3");
+      h.textContent = "Équipe " + t;
+      var c = document.createElement("span");
+      c.textContent = info.counts[t] + " / " + cfg.size;
+      h.appendChild(c);
+      var ol = document.createElement("ol");
+      info.names[t].forEach(function (p) {
+        var li = document.createElement("li");
+        li.textContent = p.name || "Joueur sans nom";
+        if (p.own) li.className = "mine";
+        ol.appendChild(li);
+      });
+      art.appendChild(h);
+      art.appendChild(ol);
+      wrap.appendChild(art);
+    }
+  }
+
+  function renderBars(info) {
+    var wrap = $("bars");
+    if (wrap.children.length !== cfg.teams) {
+      wrap.innerHTML = "";
+      for (var t = 1; t <= cfg.teams; t++) {
+        var row = document.createElement("div");
+        row.className = "bar";
+        row.innerHTML = '<span>Équipe ' + t + '</span><span class="track"><span class="fill" style="display:block"></span></span><span class="n"></span>';
+        wrap.appendChild(row);
+      }
+    }
+    for (var i = 1; i <= cfg.teams; i++) {
+      var r = wrap.children[i - 1];
+      r.querySelector(".fill").style.width = Math.min(100, (info.counts[i] / cfg.size) * 100) + "%";
+      r.querySelector(".n").textContent = info.counts[i] + "/" + cfg.size;
+    }
+  }
+
+  function renderGame() {
+    var info = snapshotCounts();
+    var total = cfg.teams * cfg.size;
+    var live = shared.db && shared.slotsReady;
+
+    // Panneau organisateur
+    if (shared.db) {
+      $("qr-status").textContent = live
+        ? info.total + " / " + total + " places prises (" + cfg.teams + " équipes de " + cfg.size + ")"
+        : "Connexion au compteur partagé…";
+      if (shared.error) $("qr-status").textContent = "Compteur partagé indisponible (" + shared.error + ").";
+    } else {
+      $("qr-status").textContent = "Le compteur partagé n'est pas disponible dans cette vue. Ouvrez la page connecté à Claude.";
+    }
+    renderBars(info);
+    renderLive(info);
+    $("admin-zone").hidden = !(shared.db && shared.isAdmin);
+    nteamsEl.disabled = sizeEl.disabled = !(shared.db && shared.isAdmin);
+
+    // Vue joueur
+    var big = $("bignum"), label = $("play-label"), btn = $("play"), left = $("play-left");
+    $("play-title").textContent = "Quelle est votre équipe ?";
+    if (rolling) return;
+    if (!shared.db) {
+      label.textContent = "Le tirage partagé n'est pas disponible ici. Ouvrez le lien en étant connecté à Claude.";
+      btn.disabled = true; left.textContent = "";
+      return;
+    }
+    if (!shared.uid) {
+      label.textContent = "Votre identité n'est pas disponible : connectez-vous à Claude pour jouer.";
+      btn.disabled = true; left.textContent = "";
+      return;
+    }
+    if (shared.error) {
+      label.textContent = "Le compteur partagé est indisponible (" + shared.error + "). Réessayez plus tard.";
+      btn.disabled = true; return;
+    }
+    if (!live) { label.textContent = "Connexion en cours…"; btn.disabled = true; return; }
+
+    var mineTeam = info.mine || lastShownTeam;
+    var pn = $("pname");
+    pn.disabled = !!mineTeam || busy;
+    if (mineTeam && info.mineName) pn.value = info.mineName;
+    if (mineTeam) {
+      big.textContent = mineTeam; big.className = "bignum done";
+      label.textContent = "Vous êtes dans l'équipe " + mineTeam + ". Retenez ce numéro.";
+      btn.disabled = true; btn.textContent = "Numéro déjà tiré";
+      left.textContent = info.total + " / " + total + " places prises";
+      return;
+    }
+    btn.textContent = "Jouer";
+    big.className = "bignum";
+    big.textContent = "?";
+    left.textContent = (total - info.total) + " place" + ((total - info.total) > 1 ? "s" : "") + " restante" + ((total - info.total) > 1 ? "s" : "") + " sur " + total;
+    if (shared.canWrite === false) {
+      label.textContent = "Votre accès est en lecture seule : demandez à l'organisateur de vous passer en Contributeur.";
+      btn.disabled = true; return;
+    }
+    if (info.total >= total) {
+      label.textContent = "Toutes les places sont prises.";
+      btn.disabled = true; return;
+    }
+    label.textContent = "Appuyez sur Jouer pour connaître votre équipe.";
+    btn.disabled = busy;
+  }
+
+  // Réserve une place libre au hasard. Un bail court sur le document de la place évite que
+  // deux joueurs prennent la même place au même instant.
+  async function claimSlot(playerName) {
+    var col = shared.db.collection("slots");
+    for (var attempt = 0; attempt < 15; attempt++) {
+      var snap = await col.get();
+      var taken = {};
+      snap.docs.forEach(function (d) { var x = d.data(); if (x && x.owner) taken[d.id] = x.owner; });
+      for (var id in taken) { if (taken[id] === shared.uid) return { team: slots[id] ? slots[id].team : parseInt(id.slice(1), 10) }; }
+      var free = [];
+      for (var t = 1; t <= cfg.teams; t++) {
+        for (var n = 1; n <= cfg.size; n++) { if (!taken[slotId(t, n)]) free.push({ id: slotId(t, n), team: t }); }
+      }
+      if (!free.length) return { full: true };
+      var pick = free[Math.floor(secureRandom() * free.length)];
+      var ref = shared.db.doc("slots/" + pick.id);
+      var lease = await ref.acquire({ holder: shared.uid, ttlMs: 3000 });
+      if (!lease.acquired) continue;
+      var cur = await ref.get();
+      if (cur.exists && cur.data() && cur.data().owner) continue;
+      await ref.set({ team: pick.team, owner: shared.uid, name: playerName, at: Date.now() });
+      return { team: pick.team };
+    }
+    return { busy: true };
+  }
+
+  async function play() {
+    if (busy || !shared.db || !shared.uid) return;
+    var playerName = $("pname").value.trim().slice(0, 30);
+    if (!playerName) {
+      var pm = $("play-msg");
+      pm.className = "msg err";
+      pm.textContent = "Saisissez votre nom pour jouer.";
+      $("pname").focus();
+      return;
+    }
+    busy = true; rolling = true;
+    $("pname").disabled = true;
+    var btn = $("play"), big = $("bignum"), label = $("play-label"), msg = $("play-msg");
+    btn.disabled = true; msg.className = "msg"; msg.textContent = "";
+    label.textContent = "Tirage en cours…";
+    big.className = "bignum";
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var timer = null;
+    if (!reduce) {
+      timer = setInterval(function () { big.textContent = 1 + Math.floor(Math.random() * cfg.teams); }, 70);
+    }
+    var started = Date.now();
+    var result;
+    try { result = await claimSlot(playerName); }
+    catch (e) { result = { error: (e && e.code) || "erreur" }; }
+    var wait = Math.max(0, 1300 - (Date.now() - started));
+    if (reduce) wait = 0;
+    await new Promise(function (r) { setTimeout(r, wait); });
+    if (timer) clearInterval(timer);
+    rolling = false; busy = false;
+
+    if (result.team) {
+      big.textContent = result.team; big.className = "bignum done";
+      label.textContent = "Vous êtes dans l'équipe " + result.team + ". Retenez ce numéro.";
+      btn.textContent = "Numéro déjà tiré";
+      lastShownTeam = result.team;
+    } else {
+      big.textContent = "?";
+      msg.className = "msg err";
+      if (result.full) msg.textContent = "Toutes les places sont prises.";
+      else if (result.busy) msg.textContent = "Beaucoup de joueurs en même temps. Appuyez de nouveau sur Jouer.";
+      else if (result.error === "invalid_argument") msg.textContent = "Vous n'avez pas le droit d'écrire ici : demandez le niveau Contributeur à l'organisateur.";
+      else msg.textContent = "Le tirage a échoué (" + result.error + "). Réessayez.";
+      btn.disabled = false;
+    }
+    renderGame();
+  }
+  $("play").addEventListener("click", play);
+
+  // Remise à zéro (éditeurs)
+  $("reset").addEventListener("click", function () { $("reset-row").hidden = true; $("reset-confirm").hidden = false; });
+  $("reset-no").addEventListener("click", function () { $("reset-confirm").hidden = true; $("reset-row").hidden = false; });
+  $("reset-yes").addEventListener("click", async function () {
+    var out = $("admin-msg");
+    $("reset-confirm").hidden = true; $("reset-row").hidden = false;
+    out.className = "msg"; out.textContent = "Remise à zéro en cours…";
+    try {
+      var ids = slotIds.slice();
+      for (var i = 0; i < ids.length; i++) { await shared.db.doc("slots/" + ids[i]).delete(); }
+      out.textContent = "Toutes les places ont été remises à zéro.";
+    } catch (e) {
+      out.className = "msg err";
+      out.textContent = "La remise à zéro a échoué (" + ((e && e.code) || "erreur") + ").";
+    }
+  });
+
+  // Réglages partagés : seuls les éditeurs les modifient
+  function applyCfgToInputs() {
+    if (document.activeElement !== nteamsEl) nteamsEl.value = cfg.teams;
+    if (document.activeElement !== sizeEl) sizeEl.value = cfg.size;
+  }
+  function saveCfg() {
+    if (!shared.db || !shared.isAdmin) return;
+    var t = clampInt(nteamsEl, 1, 50, 8), s = clampInt(sizeEl, 1, 200, 10);
+    if (t === cfg.teams && s === cfg.size) return;
+    shared.db.doc("settings/game").set({ teams: t, size: s }).catch(function () {});
+  }
+  nteamsEl.addEventListener("change", saveCfg);
+  sizeEl.addEventListener("change", saveCfg);
+
+  async function initShared() {
+    try {
+      if (!window.claude || !window.claude.use) { renderGame(); return; }
+      var results = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      var db = results[0], user = results[1];
+      if (!db) { renderGame(); return; }
+      shared.db = db;
+      if (user) {
+        shared.uid = await user.id();
+        shared.canWrite = await user.can("data.write");
+        shared.isAdmin = await user.canEdit();
+      }
+      db.doc("settings/game").onSnapshot(function (s) {
+        var x = s.exists ? s.data() : null;
+        if (x && Number.isInteger(x.teams) && Number.isInteger(x.size) && x.teams >= 1 && x.size >= 1) {
+          cfg = { teams: x.teams, size: x.size };
+          applyCfgToInputs();
+        }
+        renderGame();
+      }, function (e) { shared.error = e.code; renderGame(); });
+      db.collection("slots").onSnapshot(function (s) {
+        slots = {}; slotIds = [];
+        s.docs.forEach(function (d) {
+          slotIds.push(d.id);
+          var x = d.data();
+          if (x && x.owner) slots[d.id] = x;
+        });
+        shared.slotsReady = true;
+        if (!busy && !snapshotCounts().mine) lastShownTeam = 0;
+        renderGame();
+      }, function (e) { shared.error = e.code; renderGame(); });
+      renderGame();
+    } catch (e) {
+      shared.db = null;
+      renderGame();
+    }
+  }
+
+  // ---------- Démarrage ----------
+  renderGame();
+  initShared();
 })();
 </script>
-</body>
-</html>
+
+</body></html>
