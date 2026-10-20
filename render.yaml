@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: tirage-equipes
+    runtime: python
+    plan: free
+    buildCommand: echo "rien a installer"
+    startCommand: python3 serveur_tirage.py
+    envVars:
+      - key: PASSWORD
+        sync: false

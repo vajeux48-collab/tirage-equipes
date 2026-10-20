@@ -16,6 +16,10 @@ Les joueurs doivent pouvoir joindre votre ordinateur :
   - même réseau Wi-Fi que vous : l'adresse affichée au démarrage suffit ;
   - joueurs à distance : utilisez un tunnel (par exemple cloudflared ou ngrok) et passez son adresse avec --url.
 
+Hébergement en ligne (Render, Railway, etc.) : le port et le mot de passe se règlent avec les variables
+d'environnement PORT et PASSWORD, et l'adresse publique est déduite automatiquement de la requête.
+Voir le README.
+
 Les résultats sont gardés dans tirage_etat.json (le tirage survit à un redémarrage).
 Chaque navigateur ne peut tirer qu'une fois (l'identité est mémorisée dans le navigateur).
 """
@@ -30,9 +34,9 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 LOCK = threading.Lock()
-STATE_FILE = "tirage_etat.json"
+STATE_FILE = os.environ.get("TIRAGE_ETAT", "tirage_etat.json")
 STATE = {"teams": 8, "size": 10, "players": []}
-CFG = {"password": "", "play_url": ""}
+CFG = {"password": "", "play_url": ""}  # play_url vide = déduite de la requête
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
 
@@ -56,7 +60,7 @@ def save_state():
     os.replace(tmp, STATE_FILE)
 
 
-def build_state(client_id, is_admin):
+def build_state(client_id, is_admin, play_url=""):
     teams, size = STATE["teams"], STATE["size"]
     counts = [0] * (teams + 1)
     for p in STATE["players"]:
@@ -73,7 +77,7 @@ def build_state(client_id, is_admin):
         "counts": counts[1:],
         "mine": mine,
         "admin": is_admin,
-        "play_url": CFG["play_url"],
+        "play_url": CFG["play_url"] or play_url,
     }
     if is_admin:
         out["players"] = [
@@ -431,8 +435,13 @@ class Handler(BaseHTTPRequestHandler):
             if not ID_RE.match(cid):
                 cid = ""
             admin = self._is_admin()
+            proto = self.headers.get("X-Forwarded-Proto", "http").split(",")[0].strip()
+            if proto not in ("http", "https"):
+                proto = "http"
+            host = self.headers.get("X-Forwarded-Host") or self.headers.get("Host", "")
+            play_url = "%s://%s/" % (proto, host.split(",")[0].strip()) if host else ""
             with LOCK:
-                out = build_state(cid, admin)
+                out = build_state(cid, admin, play_url)
             self._json(200, out)
         else:
             self._json(404, {"erreur": "Introuvable."})
@@ -490,8 +499,8 @@ def lan_ip():
 
 def main():
     ap = argparse.ArgumentParser(description="Tirage d'équipes avec QR code, sans compte.")
-    ap.add_argument("--port", type=int, default=8000)
-    ap.add_argument("--password", default="", help="mot de passe organisateur (généré si absent)")
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+    ap.add_argument("--password", default=os.environ.get("PASSWORD", ""), help="mot de passe organisateur (généré si absent)")
     ap.add_argument("--url", default="", help="adresse publique des joueurs (tunnel), sans / final")
     ap.add_argument("--equipes", type=int, default=0, help="nombre d'équipes de départ")
     ap.add_argument("--taille", type=int, default=0, help="joueurs par équipe de départ")
@@ -503,14 +512,27 @@ def main():
     if args.taille and not STATE["players"]:
         STATE["size"] = max(1, min(200, args.taille))
     CFG["password"] = args.password or secrets.token_urlsafe(6)
-    base = args.url.rstrip("/") if args.url else "http://%s:%d" % (lan_ip(), args.port)
-    CFG["play_url"] = base + "/"
+    hosted = bool(os.environ.get("PORT"))
+    if args.url:
+        base = args.url.rstrip("/")
+        CFG["play_url"] = base + "/"
+    elif hosted:
+        base = ""   # hébergé : l'adresse publique est déduite de chaque requête
+    else:
+        base = "http://%s:%d" % (lan_ip(), args.port)
+        CFG["play_url"] = base + "/"
 
     srv = ThreadingHTTPServer(("0.0.0.0", args.port), Handler)
     print("Serveur de tirage démarré.")
-    print("  Joueurs (QR code)  :", CFG["play_url"])
-    print("  Organisateur       :", base + "/organisateur")
-    print("  Mot de passe       :", CFG["password"])
+    if base:
+        print("  Joueurs (QR code)  :", CFG["play_url"])
+        print("  Organisateur       :", base + "/organisateur")
+    else:
+        print("  Écoute sur le port :", args.port, "(adresse publique donnée par l'hébergeur, page /organisateur)")
+    if args.password and hosted:
+        print("  Mot de passe       : (celui de la variable PASSWORD)")
+    else:
+        print("  Mot de passe       :", CFG["password"])
     print("  Équipes            : %d x %d" % (STATE["teams"], STATE["size"]))
     print("Ctrl+C pour arrêter.")
     try:

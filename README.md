@@ -29,3 +29,25 @@ python3 serveur_tirage.py --url https://mon-adresse-publique.example   # derriè
 - Les joueurs doivent pouvoir joindre l'ordinateur : même Wi-Fi, ou tunnel (cloudflared, ngrok) avec `--url`.
 - Les résultats sont gardés dans `tirage_etat.json` (ignoré par git).
 - Chaque navigateur ne peut tirer qu'une fois.
+
+## Déployer en ligne
+
+### Option A : page HTML seule sur GitHub Pages (gratuit)
+
+Héberge uniquement `tirage_equipes.html` (tirage sur l'écran de l'organisateur, sans QR code).
+
+1. Sur GitHub : **Settings, Pages**, source **Deploy from a branch**, branche `main`, dossier `/ (root)`.
+2. La page est disponible sur `https://VOTRE-NOM.github.io/tirage-equipes/tirage_equipes.html`.
+
+### Option B : serveur avec QR code sur Render (gratuit)
+
+1. Créez un compte sur [render.com](https://render.com) et reliez votre compte GitHub.
+2. **New, Blueprint**, choisissez ce dépôt. Render lit `render.yaml`.
+3. Renseignez la variable **PASSWORD** (mot de passe de la page organisateur) puis lancez le déploiement.
+4. Ouvrez `https://VOTRE-SERVICE.onrender.com/organisateur` : le QR code pointe automatiquement vers l'adresse publique.
+
+Limites de l'offre gratuite de Render :
+- le service s'endort après un moment d'inactivité, le premier chargement peut prendre environ une minute : ouvrez la page organisateur avant l'événement ;
+- le disque est effacé à chaque redémarrage, les tirages en cours sont alors perdus.
+
+Le serveur lit les variables d'environnement `PORT` (port d'écoute) et `PASSWORD` (mot de passe organisateur).
